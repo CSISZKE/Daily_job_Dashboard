@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Completed Job Count Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .date-display {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+        
+        .upload-section {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 60px 40px;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            background: #eef1ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area.dragover {
+            background: #e0e7ff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            font-size: 1.2em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .upload-hint {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .dashboard {
+            display: none;
+            padding: 30px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stats-list {
+            background: #f8f9ff;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .stats-list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e7ff;
+        }
+        
+        .stats-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stats-list-item:hover {
+            background: #eef1ff;
+            border-radius: 4px;
+        }
+        
+        .stats-list-label {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .stats-list-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .breakdown-item {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .breakdown-item-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .breakdown-item-value {
+            font-size: 1.5em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        th[onclick] {
+            user-select: none;
+            transition: background 0.2s ease;
+        }
+        
+        th[onclick]:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+        
+        tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+        
+        .stage-breakdown {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .reset-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .reset-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .filter-toggle-container {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 2px solid #667eea;
+        }
+        
+        .filter-toggle {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .filter-btn {
+            padding: 12px 30px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover {
+            background: #eef1ff;
+        }
+        
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .filter-explanation {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .filter-explanation strong {
+            color: #667eea;
+        }
+        
+        .raw-data-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+        
+        .pagination-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9ff;
+            border-radius: 8px;
+        }
+        
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .page-size-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .page-size-btn:hover {
+            background: #eef1ff;
+        }
+        
+        .page-size-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .pagination-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+            padding: 15px;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-btn:hover:not(:disabled) {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        #pageInfo {
+            font-weight: 600;
+            color: #667eea;
+            min-width: 100px;
+            text-align: center;
+        }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .summary-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .summary-value {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .daily-breakdown {
+            margin-bottom: 30px;
+        }
+        
+        .daily-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        
+        .daily-item {
+            background: #f8f9ff;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .daily-date {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .daily-count {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .scroll-container {
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Completed Job Count Dashboard</h1>
+            <div class="date-display" id="dateDisplay"></div>
+        </div>
+        
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📊</div>
+                <div class="upload-text">Drag & Drop CSV File Here</div>
+                <div class="upload-hint">or click to browse</div>
+                <input type="file" id="fileInput" accept=".csv">
+            </div>
+        </div>
+        
+        <div class="dashboard" id="dashboard">
+            <button class="reset-btn" onclick="resetDashboard()">Upload New File</button>
+            
+            <div class="filter-toggle-container">
+                <div class="filter-toggle">
+                    <button onclick="setFilterMode('filtered')" id="btnFiltered" class="filter-btn active">Filtered Records</button>
+                    <button onclick="setFilterMode('all')" id="btnAll" class="filter-btn">All Records</button>
+                </div>
+                <div class="filter-explanation" id="filterExplanation">
+                    <strong>Filtered Records:</strong> Excludes RE, I, SP stages. Logo cutting excluded from C stage count. Support jobs show only Lineset, Tandem Lineset, Logo, and Rigging. Employee "Br - Bruggemann Bruggemann" excluded.
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Summary Statistics</div>
+                <div class="summary-stats" id="summaryStats"></div>
+            </div>
+            
+            <div class="section daily-breakdown" id="dailyBreakdownSection" style="display: none;">
+                <div class="section-title">Daily Breakdown</div>
+                <div class="daily-grid" id="dailyBreakdown"></div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Job Stage Summary</div>
+                <div id="stageStats"></div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Support Jobs</div>
+                <div id="s1s3Breakdown"></div>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Employee Performance</div>
+                <div class="scroll-container">
+                    <table id="employeeTable">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Employee Code and Name</th>
+                                <th>Total Jobs</th>
+                                <th>Job Stage Breakdown</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employeeTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="raw-data-section">
+                <div class="section-title">Raw Data</div>
+                <div class="pagination-info">
+                    <span id="paginationText">Showing 1-50 of 0 records</span>
+                    <div class="pagination-controls">
+                        <button onclick="changeRowsPerPage(50)" id="btn50" class="page-size-btn active">50</button>
+                        <button onclick="changeRowsPerPage(100)" id="btn100" class="page-size-btn">100</button>
+                        <button onclick="changeRowsPerPage(500)" id="btn500" class="page-size-btn">500</button>
+                        <button onclick="changeRowsPerPage(-1)" id="btnAll" class="page-size-btn">All</button>
+                    </div>
+                </div>
+                <div class="scroll-container">
+                    <table id="rawDataTable">
+                        <thead>
+                            <tr>
+                                <th onclick="sortRawData(0)" style="cursor: pointer;">Job Stage ▲▼</th>
+                                <th onclick="sortRawData(1)" style="cursor: pointer;">Order Type ▲▼</th>
+                                <th onclick="sortRawData(2)" style="cursor: pointer;">Serial Number ▲▼</th>
+                                <th onclick="sortRawData(3)" style="cursor: pointer;">Employee Code ▲▼</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rawDataTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="pagination-nav">
+                    <button onclick="previousPage()" id="prevBtn" class="nav-btn">← Previous</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button onclick="nextPage()" id="nextBtn" class="nav-btn">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables for sorting and pagination
+        let globalRawData = [];
+        let sortColumn = -1;
+        let sortAscending = true;
+        let currentPage = 1;
+        let rowsPerPage = 50;
+        let displayedData = [];
+        let filterMode = 'filtered'; // 'filtered' or 'all'
+        let allJobsData = []; // Store original unfiltered data
+
+        // Employee code to name mapping
+        const employeeNames = {
+            "J": "Ida Donley",
+            "M": "Mary Muir",
+            "A": "Attila Csizmadia",
+            "X": "Laszlo Csizmadia",
+            "B": "Seetha Wickramagie",
+            "T": "Marika Taumoli",
+            "R": "Richard Munro",
+            "C": "Luci Martyn",
+            "Tp": "Temp",
+            "IL": "Ilil Lunkry",
+            "F": "Helliwell Anne",
+            "I": "Renuka Narayan",
+            "D": "Chris Thomas",
+            "E": "Nongyao (Tim) Boyce",
+            "S": "Samba Moodley",
+            "Sa": "Shannon Seyb",
+            "Ka": "Callum Green",
+            "Li": "Linda Fothergill",
+            "Fr": "Fran Hazid",
+            "Jy": "Paul Martyn",
+            "K": "Kamal Fernando",
+            "gc": "Garry Claridge",
+            "Q": "Jamie Cardow",
+            "P": "Peelman Julien",
+            "H": "Sonia Hunt",
+            "L": "Rilee Lesperance",
+            "G": "Lynne Ukutaula",
+            "N": "Jane Fowler",
+            "O": "Mali Nanayakkara",
+            "Ju": "Julien Peelman",
+            "JS": "Josh Scorrar",
+            "Pa": "Paree La Varis",
+            "CB": "Chris Brook",
+            "Ed": "Ed Markey",
+            "Kv": "Kovi Mongelli",
+            "SS": "Shannon Seyb",
+            "Ar": "Arlo Jecis",
+            "Pg": "Peter Galos",
+            "IB": "Lilia Ibbertson",
+            "TG": "Te Aroha Goodwin",
+            "Dn": "Donna Mitchell",
+            "Fy": "Florence Yandall",
+            "Mb": "Mike Beeden",
+            "Rp": "Rama Parashar",
+            "Gi": "Glory Ihaia",
+            "Lo": "Lorraine Reed",
+            "Al": "Al Romaine",
+            "Te": "Test Employee",
+            "Jd": "Judy Robson-Deane",
+            "Ks": "Kathy Sun",
+            "Wk": "William Knapp",
+            "Vn": "Vai Noue",
+            "Jc": "Jamie Cardow",
+            "Hs": "Holly Smith",
+            "LL": "Lathan Lesperance",
+            "MS": "Maria Szcsukova",
+            "Sm": "Solomona Silipa",
+            "Yn": "Yan Varlamov",
+            "Ns": "Nina Spielberg",
+            "Hw": "Hamish Wilson",
+            "JB": "Jen Burgin",
+            "RT": "Po-Hsien (Robbie) Tu",
+            "Cs": "Chris Snell",
+            "Bo": "Barna Onodi",
+            "Md": "Maria Dmitrienko",
+            "Kd": "Kevin DeGregory",
+            "Hm": "Helga Mathay",
+            "Mm": "Muhammad Mulla",
+            "Jr": "Jordan Raela",
+            "As": "Amrinder Sandhu",
+            "Ld": "Luke O'Donovan",
+            "Sy": "Sayaka Yeoman",
+            "Is": "Isaac Sweetapple",
+            "Yc": "Yaxiao (Ashley) Chen",
+            "Hg": "Heather Gaites",
+            "Mw": "Michael Wong",
+            "Mv": "Maria Varlamova",
+            "Pj": "Phassanarin (Pae) Carter",
+            "TJ": "Tetsuya Joie",
+            "Br": "Bruggemann Bruggemann",
+            "At": "Alex Thompson",
+            "Ac": "Jose Alencar Lima",
+            "So": "Satoru Oba",
+            "Ea": "Elijah Akulu",
+            "Xz": "Xiaoqing (Candice) Zheng",
+            "Ik": "Ishani Kapukotuwa",
+            "Jh": "Jan Herwig",
+            "Pe": "Paul Early",
+            "Sk": "Sikanderbir (Sammy) Kaur",
+            "Mt": "Matt Walker",
+            "Mp": "Monika Pohatu",
+            "Ct": "Chris Stewart",
+            "Tl": "Tamara Lui",
+            "Lm": "Leo Mongelli",
+            "Ck": "Chathuri Kandage",
+            "Dm": "Daniel McAllister",
+            "Sf": "Shawna-Lea Funnell",
+            "Nd": "Nicky Dale",
+            "Xl": "Xia (Xaos) Liang",
+            "Me": "Michelle Tan",
+            "Go": "Godwin Omosigho",
+            "Kw": "Kate Wemyss",
+            "Jw": "Jerry Wu",
+            "Hn": "Hayden Galvin",
+            "Np": "Nina van Pallandt",
+            "Co": "Chanelle Otene",
+            "Ya": "Chaynyan (Yannie) HAN",
+            "Sg": "Saman Gulrez",
+            "JV": "Juzar Vohra",
+            "Tr": "Trish Reynold",
+            "Ec": "Erin Catchpole",
+            "Jm": "Jack Munro",
+            "HB": "Hemanta Basyal",
+            "JL": "Jule Herwig",
+            "JF": "Judit Frank",
+            "MK": "Malachi Kuramakoha Smith",
+            "My": "Maree Wigley",
+            "Db": "Dylan Bell",
+            "SR": "Xiangyan (Sophie) Ruan",
+            "LB": "Luke Barlow",
+            "Cc": "Cody Chase",
+            "AK": "Anna Kozenkova",
+            "MG": "Marina Gurina",
+            "Ge": "Georgie Petrie-Williams",
+            "JI": "Iris Bellve",
+            "BT": "Braydon Taylor",
+            "SH": "Samuel Oliver",
+            "CL": "Caleb O'Brien",
+            "DS": "Dmitry Stepin",
+            "HR": "Hayden Ritchie",
+            "AW": "Aidan Wemyss",
+            "BM": "Benjamin Richard-Marsters",
+            "TV": "Tikhon Varlamov",
+            "TN": "Tamir Naaman",
+            "BC": "Balazs Csizmadia",
+            "AN": "Annabella Tietjens",
+            "ML": "Mei Li",
+            "RW": "Reuben Wareing",
+            "DK": "Daniel Kebbedde"
+        };
+
+        function getEmployeeDisplay(code) {
+            const name = employeeNames[code];
+            return name ? `${code} - ${name}` : code;
+        }
+
+        // Display date from CSV data
+        function updateDate(dateString = null) {
+            const dateDisplay = document.getElementById('dateDisplay');
+            if (dateString) {
+                dateDisplay.textContent = dateString;
+            } else {
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                dateDisplay.textContent = now.toLocaleDateString('en-US', options);
+            }
+        }
+        updateDate();
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.csv')) {
+                processFile(file);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        });
+
+        function processFile(file) {
+            Papa.parse(file, {
+                complete: function(results) {
+                    analyzeDashboard(results.data);
+                },
+                skipEmptyLines: true
+            });
+        }
+
+        function analyzeDashboard(data) {
+            // Parse data (assuming no header row based on the uploaded file)
+            const jobs = data.map(row => ({
+                orderType: row[0],
+                employeeCode: row[1],
+                jobStage: row[2],
+                serialNumber: row[3],
+                serialWithStage: row[4],
+                dateTime: row[5]
+            })).filter(job => job.orderType && job.employeeCode);
+
+            // Store all jobs globally
+            allJobsData = jobs;
+
+            // Process based on filter mode
+            processAndRenderData();
+        }
+
+        function processAndRenderData() {
+            let jobs = allJobsData;
+
+            // In filtered mode, exclude specific employees and stages
+            if (filterMode === 'filtered') {
+                const excludedStages = ['RE', 'I', 'SP'];
+                const excludedEmployees = ['Br']; // Bruggemann
+                
+                jobs = jobs.filter(job => {
+                    // Exclude specific stages
+                    if (excludedStages.includes(job.jobStage.toUpperCase())) {
+                        return false;
+                    }
+                    // Exclude specific employees
+                    if (excludedEmployees.includes(job.employeeCode)) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            // Extract date range from CSV data
+            const dates = jobs.map(job => {
+                if (job.dateTime) {
+                    // Parse date in format "DD/MM/YYYY HH:MM:SS AM/PM"
+                    const datePart = job.dateTime.split(' ')[0]; // Get DD/MM/YYYY
+                    return datePart;
+                }
+                return null;
+            }).filter(d => d !== null);
+
+            let dateDisplay = '';
+            if (dates.length > 0) {
+                const uniqueDates = [...new Set(dates)];
+                if (uniqueDates.length === 1) {
+                    // Single date
+                    dateDisplay = formatDate(uniqueDates[0]);
+                } else {
+                    // Date range
+                    const sortedDates = uniqueDates.sort((a, b) => {
+                        const [dayA, monthA, yearA] = a.split('/');
+                        const [dayB, monthB, yearB] = b.split('/');
+                        return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+                    });
+                    dateDisplay = `${formatDate(sortedDates[0])} - ${formatDate(sortedDates[sortedDates.length - 1])}`;
+                }
+            }
+            updateDate(dateDisplay);
+
+            // Define job stage order (added SL after C, L after QS, RW at end) and excluded stages
+            const stageOrder = ['C', 'SL', 'M', 'B', 'QS', 'L', 'RI', 'RS', 'QC', 'QD', 'RW'];
+            const excludedFromSupport = ['SL'];
+            const stageCounts = {};
+            const supportJobCounts = {};
+            const employeeData = {};
+
+            jobs.forEach(job => {
+                const stage = job.jobStage;
+                const stageUpper = stage.toUpperCase();
+                const employee = job.employeeCode;
+                const orderType = job.orderType;
+
+                // Count by stage for job stage summary
+                // In filtered mode: Exclude logo from C (Cutting) stage
+                // Include SL and other main stages, but exclude support jobs (s1, s2, s3, etc.) from summary
+                if (!stage.toLowerCase().match(/^s[0-9]/)) {
+                    // In filtered mode, skip counting if it's Cutting stage AND order type contains "logo"
+                    const shouldExcludeLogoCutting = filterMode === 'filtered' && stageUpper === 'C' && orderType.toLowerCase().includes('logo');
+                    
+                    if (!shouldExcludeLogoCutting) {
+                        stageCounts[stage] = (stageCounts[stage] || 0) + 1;
+                    }
+                }
+
+                // Support jobs breakdown (s1, s2, s3, s4, etc.)
+                if (stage.toLowerCase().match(/^s[0-9]/) && !excludedFromSupport.includes(stageUpper)) {
+                    let jobType = orderType;
+                    const orderLower = orderType.toLowerCase();
+                    
+                    if (filterMode === 'filtered') {
+                        // Filtered mode: Only include specific types
+                        // Group all Tandem Lineset variants together
+                        if (orderLower.includes('tandem') && orderLower.includes('lineset')) {
+                            jobType = 'Tandem Lineset';
+                        }
+                        // Keep regular Lineset Sport
+                        else if (orderLower.includes('lineset')) {
+                            jobType = 'Lineset Sport';
+                        }
+                        // Keep Logo separate by size
+                        else if (orderLower.includes('logo')) {
+                            // Extract logo size from order type
+                            const match = orderType.match(/Logo\s+(\w+)/i);
+                            if (match) {
+                                jobType = `Logo ${match[1]}`;
+                            } else {
+                                jobType = 'Logo';
+                            }
+                        }
+                        // Keep Rigging
+                        else if (orderLower.includes('rigging')) {
+                            jobType = 'Rigging';
+                        }
+                        // Skip all other types in filtered mode
+                        else {
+                            return; // Skip this job for support jobs section
+                        }
+                    } else {
+                        // All records mode: Show everything, extract base job type
+                        const match = orderType.match(/^([^(]+)/);
+                        if (match) {
+                            jobType = match[1].trim();
+                        }
+                    }
+                    
+                    const key = `${jobType} ${stage.toUpperCase()}`;
+                    supportJobCounts[key] = (supportJobCounts[key] || 0) + 1;
+                }
+
+                // Employee data (include all jobs that passed the filter)
+                if (!employeeData[employee]) {
+                    employeeData[employee] = {
+                        total: 0,
+                        stages: {}
+                    };
+                }
+                employeeData[employee].total++;
+                employeeData[employee].stages[stage] = (employeeData[employee].stages[stage] || 0) + 1;
+            });
+
+            // Render dashboard
+            renderSummaryStats(jobs);
+            renderDailyBreakdown(jobs);
+            renderStageStats(stageCounts, stageOrder);
+            renderSupportJobs(supportJobCounts);
+            renderEmployeeTable(employeeData);
+            renderRawData(jobs);
+
+            // Show dashboard
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+        }
+
+        function renderSummaryStats(jobs) {
+            const container = document.getElementById('summaryStats');
+            container.innerHTML = '';
+
+            // Filter jobs based on mode for accurate summary
+            let jobsForSummary = jobs;
+            
+            if (filterMode === 'filtered') {
+                // Apply the same filtering logic as the rest of the dashboard
+                const excludedStages = ['RE', 'I', 'SP'];
+                jobsForSummary = jobs.filter(job => {
+                    const stageUpper = job.jobStage.toUpperCase();
+                    // Exclude specific stages
+                    if (excludedStages.includes(stageUpper)) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+
+            // Extract dates from filtered jobs
+            const dates = jobsForSummary.map(job => {
+                if (job.dateTime) {
+                    const datePart = job.dateTime.split(' ')[0];
+                    return datePart;
+                }
+                return null;
+            }).filter(d => d !== null);
+
+            const uniqueDates = [...new Set(dates)];
+            const totalJobs = jobsForSummary.length;
+            const totalEmployees = new Set(jobsForSummary.map(j => j.employeeCode)).size;
+            const avgJobsPerDay = uniqueDates.length > 0 ? (totalJobs / uniqueDates.length).toFixed(1) : 0;
+
+            const stats = [
+                { label: 'Total Jobs', value: totalJobs },
+                { label: 'Total Employees', value: totalEmployees },
+                { label: 'Days Covered', value: uniqueDates.length },
+                { label: 'Avg Jobs/Day', value: avgJobsPerDay }
+            ];
+
+            stats.forEach(stat => {
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.innerHTML = `
+                    <div class="summary-label">${stat.label}</div>
+                    <div class="summary-value">${stat.value}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderDailyBreakdown(jobs) {
+            const container = document.getElementById('dailyBreakdown');
+            const section = document.getElementById('dailyBreakdownSection');
+            
+            // Group by date
+            const dateGroups = {};
+            jobs.forEach(job => {
+                if (job.dateTime) {
+                    const datePart = job.dateTime.split(' ')[0];
+                    dateGroups[datePart] = (dateGroups[datePart] || 0) + 1;
+                }
+            });
+
+            const uniqueDates = Object.keys(dateGroups);
+            
+            // Only show daily breakdown if more than 1 day
+            if (uniqueDates.length > 1) {
+                section.style.display = 'block';
+                container.innerHTML = '';
+
+                // Sort dates
+                const sortedDates = uniqueDates.sort((a, b) => {
+                    const [dayA, monthA, yearA] = a.split('/');
+                    const [dayB, monthB, yearB] = b.split('/');
+                    return new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB);
+                });
+
+                sortedDates.forEach(date => {
+                    const item = document.createElement('div');
+                    item.className = 'daily-item';
+                    item.innerHTML = `
+                        <div class="daily-date">${date}</div>
+                        <div class="daily-count">${dateGroups[date]} jobs</div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function renderStageStats(counts, order) {
+            const container = document.getElementById('stageStats');
+            container.innerHTML = '';
+
+            const listDiv = document.createElement('div');
+            listDiv.className = 'stats-list';
+
+            // Display in specified order, then remaining stages
+            const allStages = [...new Set([...order, ...Object.keys(counts)])];
+            
+            allStages.forEach(stage => {
+                if (counts[stage]) {
+                    const item = document.createElement('div');
+                    item.className = 'stats-list-item';
+                    item.innerHTML = `
+                        <div class="stats-list-label">${getStageFullName(stage)}</div>
+                        <div class="stats-list-value">${counts[stage]}</div>
+                    `;
+                    listDiv.appendChild(item);
+                }
+            });
+
+            container.appendChild(listDiv);
+        }
+
+        function getStageFullName(stage) {
+            const stageNames = {
+                'C': 'C - Cutting',
+                'SL': 'SL - Slider Sewing',
+                'M': 'M - Main Seams',
+                'B': 'B - Bartack',
+                'QS': 'QS - Quality Sewing',
+                'L': 'L - Line Making',
+                'RI': 'RI - Rigging',
+                'RS': 'RS - Slider Rigging',
+                'QC': 'QC - Final Quality Control',
+                'QD': 'QD - Final Quality',
+                'RW': 'RW - Rework'
+            };
+            return stageNames[stage] || stage.toUpperCase();
+        }
+
+        function renderSupportJobs(breakdown) {
+            const container = document.getElementById('s1s3Breakdown');
+            container.innerHTML = '';
+
+            // Sort by stage number (S1, S2, S3, etc.) and then by count
+            const sorted = Object.entries(breakdown).sort((a, b) => {
+                const stageA = a[0].match(/S(\d+)/i);
+                const stageB = b[0].match(/S(\d+)/i);
+                const numA = stageA ? parseInt(stageA[1]) : 999;
+                const numB = stageB ? parseInt(stageB[1]) : 999;
+                
+                if (numA !== numB) return numA - numB;
+                return b[1] - a[1];
+            });
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<p style="color: #666;">No support jobs found in this dataset.</p>';
+                return;
+            }
+
+            const listDiv = document.createElement('div');
+            listDiv.className = 'stats-list';
+
+            sorted.forEach(([key, count]) => {
+                const item = document.createElement('div');
+                item.className = 'stats-list-item';
+                item.innerHTML = `
+                    <div class="stats-list-label">${key}</div>
+                    <div class="stats-list-value">${count}</div>
+                `;
+                listDiv.appendChild(item);
+            });
+
+            container.appendChild(listDiv);
+        }
+
+        function renderEmployeeTable(employeeData) {
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = '';
+
+            // Sort by total jobs (descending)
+            const sorted = Object.entries(employeeData).sort((a, b) => b[1].total - a[1].total);
+
+            sorted.forEach(([employee, data], index) => {
+                const row = document.createElement('tr');
+                
+                // Create stage breakdown string
+                const stageBreakdown = Object.entries(data.stages)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([stage, count]) => `${stage}: ${count}`)
+                    .join(' | ');
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${getEmployeeDisplay(employee)}</strong></td>
+                    <td><strong>${data.total}</strong></td>
+                    <td class="stage-breakdown">${stageBreakdown}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderRawData(jobs) {
+            globalRawData = jobs;
+            currentPage = 1;
+            displayedData = jobs;
+            updatePagination();
+        }
+
+        function displayRawData(jobs) {
+            displayedData = jobs;
+            currentPage = 1;
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const tbody = document.getElementById('rawDataTableBody');
+            tbody.innerHTML = '';
+
+            const totalRecords = displayedData.length;
+            const showAll = rowsPerPage === -1;
+            const totalPages = showAll ? 1 : Math.ceil(totalRecords / rowsPerPage);
+            
+            // Constrain current page
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            // Calculate slice indices
+            const startIndex = showAll ? 0 : (currentPage - 1) * rowsPerPage;
+            const endIndex = showAll ? totalRecords : Math.min(startIndex + rowsPerPage, totalRecords);
+            
+            // Display records for current page
+            const pageData = displayedData.slice(startIndex, endIndex);
+            
+            pageData.forEach(job => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${job.jobStage}</td>
+                    <td>${job.orderType}</td>
+                    <td>${job.serialNumber}</td>
+                    <td>${job.employeeCode}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Update pagination info
+            document.getElementById('paginationText').textContent = 
+                `Showing ${startIndex + 1}-${endIndex} of ${totalRecords} records`;
+            
+            document.getElementById('pageInfo').textContent = 
+                showAll ? `Page 1 of 1` : `Page ${currentPage} of ${totalPages}`;
+
+            // Update button states
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages || showAll;
+        }
+
+        function changeRowsPerPage(rows) {
+            rowsPerPage = rows;
+            currentPage = 1;
+            
+            // Update active button
+            document.querySelectorAll('.page-size-btn').forEach(btn => btn.classList.remove('active'));
+            if (rows === 50) document.getElementById('btn50').classList.add('active');
+            else if (rows === 100) document.getElementById('btn100').classList.add('active');
+            else if (rows === 500) document.getElementById('btn500').classList.add('active');
+            else document.getElementById('btnAll').classList.add('active');
+            
+            updatePagination();
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(displayedData.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        }
+
+        function sortRawData(columnIndex) {
+            // Toggle sort direction if same column, otherwise reset to ascending
+            if (sortColumn === columnIndex) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = columnIndex;
+                sortAscending = true;
+            }
+
+            const sortedData = [...globalRawData].sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(columnIndex) {
+                    case 0: // Job Stage
+                        aVal = a.jobStage;
+                        bVal = b.jobStage;
+                        break;
+                    case 1: // Order Type
+                        aVal = a.orderType;
+                        bVal = b.orderType;
+                        break;
+                    case 2: // Serial Number
+                        aVal = parseInt(a.serialNumber) || a.serialNumber;
+                        bVal = parseInt(b.serialNumber) || b.serialNumber;
+                        break;
+                    case 3: // Employee Code
+                        aVal = a.employeeCode;
+                        bVal = b.employeeCode;
+                        break;
+                }
+
+                // Handle numeric vs string comparison
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return sortAscending ? aVal - bVal : bVal - aVal;
+                } else {
+                    const strA = String(aVal).toLowerCase();
+                    const strB = String(bVal).toLowerCase();
+                    if (strA < strB) return sortAscending ? -1 : 1;
+                    if (strA > strB) return sortAscending ? 1 : -1;
+                    return 0;
+                }
+            });
+
+            displayRawData(sortedData);
+        }
+
+        function setFilterMode(mode) {
+            filterMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if (mode === 'filtered') {
+                document.getElementById('btnFiltered').classList.add('active');
+                document.getElementById('filterExplanation').innerHTML = 
+                    '<strong>Filtered Records:</strong> Excludes RE, I, SP stages. Logo cutting excluded from C stage count. Support jobs show only Lineset, Tandem Lineset, Logo, and Rigging. Employee "Br - Bruggemann Bruggemann" excluded.';
+            } else {
+                document.getElementById('btnAll').classList.add('active');
+                document.getElementById('filterExplanation').innerHTML = 
+                    '<strong>All Records:</strong> Shows all job stages, all support job types, and all employees without any filtering.';
+            }
+            
+            // Reprocess and re-render data
+            processAndRenderData();
+        }
+
+        function resetDashboard() {
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            updateDate(); // Reset to default date message
+        }
+
+        function formatDate(dateStr) {
+            // Convert DD/MM/YYYY to readable format
+            const [day, month, year] = dateStr.split('/');
+            const date = new Date(year, month - 1, day);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+    </script>
+</body>
+</html>
