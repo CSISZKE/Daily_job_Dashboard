@@ -753,9 +753,13 @@
         function processFile(file) {
             Papa.parse(file, {
                 complete: function(results) {
+                    console.log('Parsed CSV rows:', results.data.length);
+                    console.log('First row sample:', results.data[0]);
                     analyzeDashboard(results.data);
                 },
-                skipEmptyLines: true
+                skipEmptyLines: true,
+                delimiter: ',',
+                newline: '\r'  // Force carriage return as line ending
             });
         }
 
@@ -767,8 +771,12 @@
                 jobStage: row[2],
                 serialNumber: row[3],
                 serialWithStage: row[4],
-                dateTime: row[5]
+                dateTime: row[5] || row[4]  // Try column 5 first, fallback to column 4
             })).filter(job => job.orderType && job.employeeCode);
+
+            console.log('Total jobs parsed:', jobs.length);
+            console.log('First job:', jobs[0]);
+            console.log('First job dateTime field:', jobs[0] ? jobs[0].dateTime : 'N/A');
 
             // Store all jobs globally
             allJobsData = jobs;
@@ -798,15 +806,17 @@
                 });
             }
 
-            // Extract date range from CSV data
+            // Extract date range from CSV data - be more defensive
             const dates = jobs.map(job => {
-                if (job.dateTime) {
+                if (job.dateTime && typeof job.dateTime === 'string' && job.dateTime.trim()) {
                     // Parse date in format "DD/MM/YYYY HH:MM:SS AM/PM"
-                    const datePart = job.dateTime.split(' ')[0]; // Get DD/MM/YYYY
-                    return datePart;
+                    const parts = job.dateTime.trim().split(' ');
+                    if (parts.length > 0 && parts[0].includes('/')) {
+                        return parts[0]; // Get DD/MM/YYYY
+                    }
                 }
                 return null;
-            }).filter(d => d !== null);
+            }).filter(d => d !== null && d !== '');
 
             let dateDisplay = '';
             if (dates.length > 0) {
@@ -834,15 +844,15 @@
             const employeeData = {};
 
             jobs.forEach(job => {
-                const stage = job.jobStage;
-                const stageUpper = stage.toUpperCase();
+                const stage = job.jobStage ? job.jobStage.toUpperCase() : ''; // Normalize to uppercase
+                const stageUpper = stage;
                 const employee = job.employeeCode;
                 const orderType = job.orderType;
 
                 // Count by stage for job stage summary
                 // In filtered mode: Exclude logo from C (Cutting) stage
                 // Include SL and other main stages, but exclude support jobs (s1, s2, s3, etc.) from summary
-                if (!stage.toLowerCase().match(/^s[0-9]/)) {
+                if (!stage.match(/^S[0-9]/)) {
                     // In filtered mode, skip counting if it's Cutting stage AND order type contains "logo"
                     const shouldExcludeLogoCutting = filterMode === 'filtered' && stageUpper === 'C' && orderType.toLowerCase().includes('logo');
                     
@@ -852,7 +862,7 @@
                 }
 
                 // Support jobs breakdown (s1, s2, s3, s4, etc.)
-                if (stage.toLowerCase().match(/^s[0-9]/) && !excludedFromSupport.includes(stageUpper)) {
+                if (stage.match(/^S[0-9]/) && !excludedFromSupport.includes(stageUpper)) {
                     let jobType = orderType;
                     const orderLower = orderType.toLowerCase();
                     
@@ -931,7 +941,7 @@
                 // Apply the same filtering logic as the rest of the dashboard
                 const excludedStages = ['RE', 'I', 'SP'];
                 jobsForSummary = jobs.filter(job => {
-                    const stageUpper = job.jobStage.toUpperCase();
+                    const stageUpper = job.jobStage ? job.jobStage.toUpperCase() : '';
                     // Exclude specific stages
                     if (excludedStages.includes(stageUpper)) {
                         return false;
@@ -940,25 +950,29 @@
                 });
             }
 
-            // Extract dates from filtered jobs
-            const dates = jobsForSummary.map(job => {
-                if (job.dateTime) {
-                    const datePart = job.dateTime.split(' ')[0];
-                    return datePart;
+            // Extract dates from filtered jobs - be more robust
+            const datesWithData = jobsForSummary.map(job => {
+                if (job.dateTime && typeof job.dateTime === 'string' && job.dateTime.trim()) {
+                    // Split by space and take first part (DD/MM/YYYY)
+                    const parts = job.dateTime.trim().split(' ');
+                    if (parts.length > 0 && parts[0].includes('/')) {
+                        return parts[0];
+                    }
                 }
                 return null;
-            }).filter(d => d !== null);
+            }).filter(d => d !== null && d !== '');
 
-            const uniqueDates = [...new Set(dates)];
+            const uniqueDates = [...new Set(datesWithData)];
             const totalJobs = jobsForSummary.length;
-            const totalEmployees = new Set(jobsForSummary.map(j => j.employeeCode)).size;
-            const avgJobsPerDay = uniqueDates.length > 0 ? (totalJobs / uniqueDates.length).toFixed(1) : 0;
+            const totalEmployees = new Set(jobsForSummary.map(j => j.employeeCode).filter(c => c)).size;
+            const daysCovered = uniqueDates.length;
+            const avgJobsPerDay = daysCovered > 0 ? Math.round(totalJobs / daysCovered) : 0;
 
             const stats = [
-                { label: 'Total Jobs', value: totalJobs },
+                { label: 'Total Jobs', value: totalJobs.toLocaleString() },
                 { label: 'Total Employees', value: totalEmployees },
-                { label: 'Days Covered', value: uniqueDates.length },
-                { label: 'Avg Jobs/Day', value: avgJobsPerDay }
+                { label: 'Days Covered', value: daysCovered },
+                { label: 'Avg Jobs/Day', value: avgJobsPerDay.toLocaleString() }
             ];
 
             stats.forEach(stat => {
@@ -1050,7 +1064,10 @@
                 'RS': 'RS - Slider Rigging',
                 'QC': 'QC - Final Quality Control',
                 'QD': 'QD - Final Quality',
-                'RW': 'RW - Rework'
+                'RW': 'RW - ReWork',
+                'RE': 'RE - Reinforcing',
+                'SP': 'SP - Specials',
+                'I': 'I - I-beam'
             };
             return stageNames[stage] || stage.toUpperCase();
         }
