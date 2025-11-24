@@ -718,7 +718,8 @@ const linesetCategories = new Set([
     'Lineset Sport',
     'Tandem Lineset',
     'Failsmart Kit',
-    'Half Life Kit'
+    'Half Life Kit',
+    'Reline'
 ]);
 
 // -------- Main CSV entry point --------
@@ -799,24 +800,28 @@ function processAndRender() {
 }
 
 
+
 // -------- Summary stats --------
 function renderSummaryStats(data) {
     const container = document.getElementById('summaryStats');
     container.innerHTML = '';
 
-    const totalJobs = data.length;
+    // Always exclude Br from summary stats (both modes)
+    const cleaned = data.filter(j => j.employee !== 'Br');
 
-    const totalCanopyQC = data.filter(j =>
+    const totalJobs = cleaned.length;
+
+    const totalCanopyQC = cleaned.filter(j =>
         j.isCanopy && (j.job || '').toUpperCase() === 'QC'
     ).length;
 
-    const totalLinesetS3 = data.filter(j =>
+    const totalLinesetS3 = cleaned.filter(j =>
         j.isSupport &&
         (j.job || '').toUpperCase() === 'S3' &&
         linesetCategories.has(classifySupportJob(j.productName))
     ).length;
 
-    const daysCovered = new Set(data.map(j => j.dateOnly).filter(Boolean)).size;
+    const daysCovered = new Set(cleaned.map(j => j.dateOnly).filter(Boolean)).size;
 
     const stats = [
         { label: 'Total Canopies Completed (QC)', value: totalCanopyQC },
@@ -895,6 +900,7 @@ function getStageFullName(stage) {
     return map[stage] || stage;
 }
 
+
 function renderStageSummary(data, brCanopySerials) {
     const container = document.getElementById('stageStats');
     container.innerHTML = '';
@@ -904,7 +910,8 @@ function renderStageSummary(data, brCanopySerials) {
     const filteredOutStages = ['RE','I','SP','SL','RS','QD'];
 
     const totals = {};
-    const canopyData = data.filter(j => j.isCanopy);
+    // Always exclude Br from stage counts (both modes)
+    const canopyData = data.filter(j => j.isCanopy && j.employee !== 'Br');
 
     canopyData.forEach(j => {
         const stage = (j.job || '').toUpperCase();
@@ -946,6 +953,7 @@ function renderStageSummary(data, brCanopySerials) {
 
     container.appendChild(listDiv);
 }
+
 
 // -------- Support jobs --------
 function renderSupportJobs(data) {
